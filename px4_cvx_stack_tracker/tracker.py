@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 logger = logging.getLogger("tracker")
 logger.setLevel(logging.DEBUG)
 INCLUDE_ELAPSED_TIME_IN_DEBUG = False
+INCLUDE_CONTAINER_SIZES_IN_DEBUG = False
 
 if not logger.handlers:
     handler = logging.StreamHandler()
@@ -109,10 +110,16 @@ class MultiObjectTracker:
         if self.ros:
             self.publishRosMessage("estimate")
 
+        if INCLUDE_CONTAINER_SIZES_IN_DEBUG:
+            logger.debug(f"[estimate] trackers size: {len(self.trackers)}")
+
         return outputs
 
     @elapsed
     def track(self, detections):
+        if len(detections) > 50:
+            logging.warning(f'[track] called with {len(detections)} detections. This values is too high.')
+
         # Prediction
         dt = time.time_ns() / 1e9 - self.t
         for t in self.trackers:
@@ -156,6 +163,10 @@ class MultiObjectTracker:
         # Publish
         if self.ros:
             self.publishRosMessage("track")
+
+        if INCLUDE_CONTAINER_SIZES_IN_DEBUG:
+            logger.debug(f"[track] detections size: {len(detections)}")
+            logger.debug(f"[track] trackers size: {len(self.trackers)}")
 
     @elapsed
     def enableRosPublishers(self, node, ros_version=2):
