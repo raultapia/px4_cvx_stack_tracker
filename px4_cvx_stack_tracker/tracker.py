@@ -5,12 +5,25 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger("tracker")
 logger.setLevel(logging.DEBUG)
+INCLUDE_ELAPSED_TIME_IN_DEBUG = False
 
 if not logger.handlers:
     handler = logging.StreamHandler()
     formatter = logging.Formatter("\033[1;37mTRACKER %(levelname)s\033[0m: %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+
+def elapsed(func):
+    def wrapper(*args, **kwargs):
+        if INCLUDE_ELAPSED_TIME_IN_DEBUG:
+            start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        if INCLUDE_ELAPSED_TIME_IN_DEBUG:
+            elapsed_time = time.perf_counter() - start_time
+            logger.debug(f"[{func.__name__}] Elapsed time: {elapsed_time:.6f} seconds")
+        return result
+    return wrapper
 
 
 class KalmanFilter:
@@ -84,6 +97,7 @@ class MultiObjectTracker:
         self.ros = False
         logger.debug("MultiObjectTracker initialized")
 
+    @elapsed
     def estimate(self):
         outputs = []
         dt = time.time_ns() / 1e9 - self.t
@@ -97,6 +111,7 @@ class MultiObjectTracker:
 
         return outputs
 
+    @elapsed
     def track(self, detections):
         # Prediction
         dt = time.time_ns() / 1e9 - self.t
@@ -142,6 +157,7 @@ class MultiObjectTracker:
         if self.ros:
             self.publishRosMessage("track")
 
+    @elapsed
     def enableRosPublishers(self, node, ros_version=2):
         from std_msgs.msg import String
         self.node = node
@@ -155,6 +171,7 @@ class MultiObjectTracker:
             self.pub["track"] = node.create_publisher(String, '/px4_cvx_stack_tracker/track', 10)
         self.ros = True
 
+    @elapsed
     def publishRosMessage(self, topic):
         from std_msgs.msg import String
         msg = String()
