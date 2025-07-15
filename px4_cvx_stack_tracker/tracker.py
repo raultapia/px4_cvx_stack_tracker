@@ -142,12 +142,17 @@ class MultiObjectTracker:
         if self.ros:
             self.publishRosMessage("track")
 
-    def enableRosPublishers(self):
-        import rospy
+    def enableRosPublishers(self, node, ros_version=2):
         from std_msgs.msg import String
+        self.node = node
         self.pub = {}
-        self.pub["estimate"] = rospy.Publisher('/px4_cvx_stack_tracker/estimate', String, queue_size=10)
-        self.pub["track"] = rospy.Publisher('/px4_cvx_stack_tracker/track', String, queue_size=10)
+        if ros_version == 1:
+            import rospy
+            self.pub["estimate"] = rospy.Publisher('/px4_cvx_stack_tracker/estimate', String, 10)
+            self.pub["track"] = rospy.Publisher('/px4_cvx_stack_tracker/track', String, 10)
+        if ros_version == 2:
+            self.pub["estimate"] = node.create_publisher(String, '/px4_cvx_stack_tracker/estimate', 10)
+            self.pub["track"] = node.create_publisher(String, '/px4_cvx_stack_tracker/track', 10)
         self.ros = True
 
     def publishRosMessage(self, topic):
